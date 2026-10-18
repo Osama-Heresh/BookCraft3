@@ -17,6 +17,7 @@ import {
 } from 'docx';
 import { BookProject, Chapter, CoverConfig, IllustrationItem, PreflightReport } from '../types';
 import { AMIRI_FONT_BASE64 } from './fonts/amiriFont';
+import { getDesignFamily } from './designFamilies';
 
 /**
  * Converts hex color string to RGB tuple
@@ -211,6 +212,35 @@ export class ExportService {
     illustrations: IllustrationItem[],
     mode: 'print' | 'digital' = 'print'
   ): Promise<Blob> {
+    // 1. Prefer Chromium-based server pipeline with HarfBuzz Arabic OpenType layout & embedded fonts
+    try {
+      const res = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ book, chapters, cover, illustrations, mode }),
+      });
+
+      if (res.ok) {
+        return await res.blob();
+      }
+      console.warn('Server PDF export returned status:', res.status, 'Falling back to client generator...');
+    } catch (apiErr) {
+      console.warn('Server PDF export unreachable, falling back to client generator:', apiErr);
+    }
+
+    // 2. Client-side fallback generator
+    return this.generateClientPDF(book, chapters, cover, illustrations, mode);
+  }
+
+  static async generateClientPDF(
+    book: BookProject,
+    chapters: Chapter[],
+    cover: CoverConfig | null,
+    illustrations: IllustrationItem[],
+    mode: 'print' | 'digital' = 'print'
+  ): Promise<Blob> {
     const isRtl = book.language === 'ar' || /[\u0600-\u06FF]/.test(book.title);
 
     // Dimensions in mm
@@ -243,17 +273,24 @@ export class ExportService {
     const contentW = widthMm - marginX * 2;
     const rightMarginX = widthMm - marginX;
 
-    const [r, g, b] = hexToRgb(cover?.themeColor || '#0f766e');
+    const family = getDesignFamily(book.designFamily);
+    const themeColor = cover?.themeColor || family.primaryAccent || '#0f766e';
+    const secondaryColor = family.secondaryAccent || '#c8a96b';
+    const [r, g, b] = hexToRgb(themeColor);
+    const [sr, sg, sb] = hexToRgb(secondaryColor);
     const borderMargin = 6;
     const borderW = widthMm - borderMargin * 2;
     const borderH = heightMm - borderMargin * 2;
 
-    // Helper: Draw elegant dual-line colored page border like published books
+    // Helper: Draw elegant dual-line colored page border reflecting design family
     const drawPageBorder = () => {
+      // Primary accent outer border
       doc.setDrawColor(r, g, b);
       doc.setLineWidth(0.5);
       doc.rect(borderMargin, borderMargin, borderW, borderH);
 
+      // Secondary accent inner hairline border
+      doc.setDrawColor(sr, sg, sb);
       doc.setLineWidth(0.2);
       doc.rect(borderMargin + 1.2, borderMargin + 1.2, borderW - 2.4, borderH - 2.4);
     };
@@ -262,7 +299,7 @@ export class ExportService {
 
     // Helper: Header in colored rectangular box and footer with page number
     const addPageHeaderFooter = (leftHeader: string, rightHeader: string, pageNum: number) => {
-      // 1. Colored Rectangular Box for Header
+      // 1. Header with family accent styling
       const rectX = marginX - 1;
       const rectY = marginY - 9.5;
       const rectW = contentW + 2;
@@ -271,12 +308,16 @@ export class ExportService {
       doc.setFillColor(r, g, b);
       doc.roundedRect(rectX, rectY, rectW, rectH, 1, 1, 'F');
 
+      // Thin secondary accent bottom strip on the header
+      doc.setFillColor(sr, sg, sb);
+      doc.rect(rectX, rectY + rectH - 0.7, rectW, 0.7, 'F');
+
       // Text inside the colored rectangle
       doc.setFont(primaryFont, 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(255, 255, 255); // Crisp contrast white text
 
-      const textY = rectY + 4.8;
+      const textY = rectY + 4.5;
       if (isRtl) {
         doc.text(toVisualArabic(rightHeader), rectX + rectW - 3, textY, { align: 'right' });
         doc.text(toVisualArabic(leftHeader), rectX + 3, textY, { align: 'left' });
@@ -287,14 +328,19 @@ export class ExportService {
 
       // 2. Footer with Page Number
       const footerY = heightMm - marginY + 2;
-      doc.setDrawColor(r, g, b);
+      doc.setDrawColor(sr, sg, sb);
       doc.setLineWidth(0.3);
       doc.line(marginX, footerY, rightMarginX, footerY);
 
       doc.setFont(primaryFont, 'normal');
       doc.setFontSize(9);
       doc.setTextColor(r, g, b);
-      doc.text(`— ${pageNum} —`, widthMm / 2, footerY + 5.5, { align: 'center' });
+      const folioText = family.headerStyle === 'ornate-divider'
+        ? `— ❖ ${pageNum} ❖ —`
+        : family.headerStyle === 'hairline-rule'
+        ? `• ${pageNum} •`
+        : `— ${pageNum} —`;
+      doc.text(isRtl ? toVisualArabic(folioText) : folioText, widthMm / 2, footerY + 5.5, { align: 'center' });
     };
 
     // Helper: Colored rectangular header banner for Chapter Title, Conclusion, and About Author
@@ -303,16 +349,20 @@ export class ExportService {
       doc.setFillColor(r, g, b);
       doc.roundedRect(marginX, curY, contentW, bannerH, 1.5, 1.5, 'F');
 
+      // Secondary decorative bottom rule
+      doc.setFillColor(sr, sg, sb);
+      doc.rect(marginX + 2, curY + bannerH - 1, contentW - 4, 0.8, 'F');
+
       doc.setFont(primaryFont, 'normal');
       doc.setFontSize(14.5);
       doc.setTextColor(255, 255, 255);
-      const textY = curY + (subText ? 7.5 : 8.5);
+      const textY = curY + (subText ? 7.2 : 8.2);
       doc.text(isRtl ? toVisualArabic(headingText) : headingText, widthMm / 2, textY, { align: 'center' });
 
       if (subText) {
         doc.setFontSize(9.5);
         doc.setTextColor(235, 245, 255);
-        doc.text(isRtl ? toVisualArabic(subText) : subText, widthMm / 2, textY + 5.5, { align: 'center' });
+        doc.text(isRtl ? toVisualArabic(subText) : subText, widthMm / 2, textY + 5.2, { align: 'center' });
       }
 
       return bannerH;
@@ -758,7 +808,8 @@ export class ExportService {
     const isRtl = book.language === 'ar' || /[\u0600-\u06FF]/.test(book.title);
     const bodyAlignment = isRtl ? AlignmentType.RIGHT : AlignmentType.LEFT;
     const fontName = isRtl ? 'Amiri' : 'EB Garamond';
-    const themeHexClean = (cover?.themeColor || '#0f766e').replace('#', '').trim();
+    const family = getDesignFamily(book.designFamily);
+    const themeHexClean = (cover?.themeColor || family.primaryAccent || '#0f766e').replace('#', '').trim();
 
     const docParagraphs: Paragraph[] = [];
 

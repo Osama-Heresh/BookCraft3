@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import mammoth from 'mammoth';
+import { renderBookToPdf } from './server/pdfRenderer.js';
 
 dotenv.config();
 
@@ -726,6 +727,30 @@ Return only JSON without markdown fences.`;
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error('Fact check error:', errorMsg);
     res.status(500).json({ error: 'Fact check failed: ' + errorMsg });
+  }
+});
+
+// 10. Publication-Grade Chromium PDF Export Service (100% Arabic HarfBuzz Shaping & RTL)
+app.post('/api/export-pdf', async (req: Request, res: Response) => {
+  try {
+    const { book, chapters, cover, illustrations, mode = 'print' } = req.body;
+    if (!book || !chapters) {
+      return res.status(400).json({ error: 'Book project and chapters are required for PDF export.' });
+    }
+
+    const pdfBuffer = await renderBookToPdf(book, chapters, cover || null, illustrations || [], mode);
+    
+    const safeTitle = (book.title || 'Manuscript').replace(/[^a-zA-Z0-9_\u0600-\u06FF]/g, '_');
+    const filename = `${safeTitle}_${mode === 'print' ? 'Print_Ready' : 'Digital'}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.send(pdfBuffer);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('PDF export error:', errorMsg);
+    res.status(500).json({ error: 'PDF export failed: ' + errorMsg });
   }
 });
 

@@ -25,6 +25,7 @@ export interface BookProject {
   description: string;
   status: BookStatus;
   designFamily: string;
+  preferredPageTemplate?: PageTemplateId;
   trimSize: TrimSize;
   editingLevel: EditingLevel;
   createdAt: string;
@@ -113,6 +114,45 @@ export interface CoverConfig {
   updatedAt: string;
 }
 
+export type ChapterStyle =
+  | 'arch'
+  | 'asymmetric-bar'
+  | 'luxury-rule'
+  | 'minimal'
+  | 'workbook-card'
+  | 'photo-hero'
+  | 'academic-frame'
+  | 'bold-numeral'
+  | 'narrative-vignette';
+
+export type HeaderStyle =
+  | 'ornate-divider'
+  | 'asymmetric-pill'
+  | 'hairline-rule'
+  | 'minimal-clean'
+  | 'badge-tracker'
+  | 'caption-strip'
+  | 'dual-academic-rule'
+  | 'solid-contrast-tab'
+  | 'delicate-italic';
+
+export type PageTemplateId =
+  | 'chapter-opener'
+  | 'text-callout'
+  | 'two-column-framework'
+  | 'figure-caption'
+  | 'summary-takeaways';
+
+export interface PageTemplateInfo {
+  id: PageTemplateId;
+  name: string;
+  nameAr: string;
+  tagline: string;
+  taglineAr: string;
+  description: string;
+  descriptionAr: string;
+}
+
 export interface DesignSystem {
   id: string;
   name: string;
@@ -125,9 +165,13 @@ export interface DesignSystem {
   primaryAccent: string;
   secondaryAccent: string;
   pageBackground: string;
+  textColor?: string;
   trimSize: TrimSize;
   sampleQuote: string;
   sampleQuoteAr: string;
+  chapterStyle?: ChapterStyle;
+  headerStyle?: HeaderStyle;
+  ornamentStyle?: 'islamic-geometric' | 'hairline' | 'bold-block' | 'none' | 'botanical-flourish' | 'modern-line';
 }
 
 export interface PreflightCheckItem {
