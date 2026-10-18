@@ -74,9 +74,41 @@ export interface WritingQualityReport {
   createdAt: string;
 }
 
-export type VisualType = 'diagram' | 'chart' | 'illustration' | 'photo' | 'timeline' | 'map';
-export type AspectRatio = '16:9' | '4:3' | '1:1' | '3:2';
+export type VisualType =
+  | 'editorial_illustration'
+  | 'photorealistic'
+  | 'educational_diagram'
+  | 'technical_diagram'
+  | 'infographic'
+  | 'chart'
+  | 'map_timeline'
+  | 'instructional'
+  | 'chapter_opener'
+  | 'diagram'
+  | 'illustration'
+  | 'photo'
+  | 'timeline'
+  | 'map';
+
+export type AspectRatio = '16:9' | '4:3' | '1:1' | '3:2' | '3:4';
 export type ImagePlacement = 'chapter_header' | 'inline_paragraph' | 'full_page' | 'callout';
+
+export interface VisualOpportunity {
+  id: string;
+  chapterNumber: number;
+  chapterTitle: string;
+  conceptName: string;
+  educationalPurpose: string;
+  relevantPassageSnippet: string;
+  recommendedVisualType: VisualType;
+  recommendedPlacement: ImagePlacement;
+  aspectRatio: AspectRatio;
+  importance: 'essential' | 'recommended' | 'optional';
+  captionBrief: string;
+  dataLabelsOrLegend?: string[];
+  sourceReference?: string;
+  suggestedArtworkUrl?: string;
+}
 
 export interface IllustrationItem {
   id: string;
@@ -90,9 +122,60 @@ export interface IllustrationItem {
   aspectRatio: AspectRatio;
   placement: ImagePlacement;
   caption: string;
+  sourceCredit?: string;
+  importance?: 'essential' | 'recommended' | 'optional';
   status: 'planned' | 'generating' | 'generated' | 'approved' | 'rejected';
   imageUrl?: string;
+  deterministicData?: {
+    nodes?: Array<{ id: string; label: string; role?: string; color?: string }>;
+    links?: Array<{ from: string; to: string; label?: string }>;
+    chartData?: Array<{ label: string; value: number; unit?: string }>;
+    timelineEvents?: Array<{ year: string; title: string; description: string }>;
+  };
   createdAt: string;
+}
+
+export type CoverLayoutFamily =
+  | 'full-bleed-hero'
+  | 'minimal-typographic'
+  | 'editorial-split'
+  | 'premium-heritage'
+  | 'luxury-professional'
+  | 'bold-contemporary'
+  | 'academic-grid';
+
+export interface CoverConcept {
+  id: string;
+  conceptName: string;
+  conceptNameAr: string;
+  category: string;
+  visualTheme: string;
+  visualThemeAr: string;
+  description: string;
+  descriptionAr: string;
+  focalPoint: string;
+  focalPointAr: string;
+  palette: string[];
+  recommendedArtworkUrl?: string;
+  recommendedLayout: CoverLayoutFamily;
+  contrastMode: 'dark' | 'light';
+  lightingMood: string;
+}
+
+export type PaperStock = '50_white' | '60_cream' | '70_white' | '80_gloss';
+export type BindingMethod = 'perfect_paperback' | 'case_hardcover';
+
+export interface SpineCalculation {
+  pageCount: number;
+  paperStock: PaperStock;
+  bindingMethod: BindingMethod;
+  pageThicknessMm: number;
+  spineWidthMm: number;
+  hasSpineText: boolean;
+  safeMarginMm: number;
+  bleedMm: number;
+  fullCoverWidthMm: number;
+  fullCoverHeightMm: number;
 }
 
 export interface CoverConfig {
@@ -109,8 +192,15 @@ export interface CoverConfig {
   isbn: string;
   themeColor: string;
   fontStyle: string;
+  coverLayoutFamily?: CoverLayoutFamily;
+  activeConceptId?: string;
+  paperStock?: PaperStock;
+  bindingMethod?: BindingMethod;
+  pageCount?: number;
   coverArtworkUrl?: string;
   authorPhotoUrl?: string;
+  barcodeUrl?: string;
+  publisherName?: string;
   updatedAt: string;
 }
 

@@ -183,6 +183,21 @@ async function dataUrlToUint8Array(
   targetWidth = 800,
   targetHeight = 450
 ): Promise<Uint8Array | null> {
+  if (!dataUrl) return null;
+
+  // Direct fetch for relative and HTTP assets
+  if (dataUrl.startsWith('/') || dataUrl.startsWith('http')) {
+    try {
+      const resp = await fetch(dataUrl);
+      if (resp.ok) {
+        const buf = await resp.arrayBuffer();
+        return new Uint8Array(buf);
+      }
+    } catch {
+      // Continue to canvas fallback
+    }
+  }
+
   try {
     const pngDataUrl = await rasterizeDataUrlToPng(dataUrl, targetWidth, targetHeight);
     const commaIndex = pngDataUrl.indexOf(',');

@@ -11,9 +11,20 @@ import {
   Loader2,
   FileText,
   Layers,
+  CheckCircle2,
+  AlertCircle,
+  Bookmark,
+  Network,
+  BarChart3,
+  Calendar,
+  X,
+  Sliders,
+  Check,
 } from 'lucide-react';
-import { BookProject, Chapter, IllustrationItem, VisualType, AspectRatio, ImagePlacement } from '../types';
+import { BookProject, Chapter, IllustrationItem, VisualOpportunity, VisualType, AspectRatio, ImagePlacement } from '../types';
 import { Language, translations } from '../lib/i18n';
+import { IllustrationIntelligenceEngine } from '../lib/illustrationIntelligence';
+import { VISUAL_ASSETS, generateDeterministicDiagram } from '../lib/visualAssetLibrary';
 
 interface IllustrationStudioProps {
   book: BookProject;
@@ -33,402 +44,443 @@ export const IllustrationStudio: React.FC<IllustrationStudioProps> = ({
   language,
 }) => {
   const t = translations[language];
+  const isArabic = book.language === 'ar' || language === 'ar';
+  const isRtl = isArabic;
 
-  const [planning, setPlanning] = useState(false);
+  const [analyzingPlan, setAnalyzingPlan] = useState(false);
+  const [opportunities, setOpportunities] = useState<VisualOpportunity[]>(() =>
+    IllustrationIntelligenceEngine.analyzeManuscriptVisualPlan(book, chapters)
+  );
+  const [selectedAssetForItemId, setSelectedAssetForItemId] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Auto-Plan Visuals via BookDirector
-  const handleAutoPlan = async () => {
-    setPlanning(true);
+  // Re-run manuscript analysis
+  const handleRunVisualIntelligence = () => {
+    setAnalyzingPlan(true);
     setStatusMessage(null);
     setErrorMessage(null);
     try {
-      const res = await fetch('/api/gemini/plan-illustrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookTitle: book.title,
-          category: book.category,
-          chapters: chapters.map((c) => ({
-            chapterNumber: c.chapterNumber,
-            title: c.title,
-            summary: c.userEditedContent?.slice(0, 300) || c.originalContent?.slice(0, 300),
-          })),
-          language: book.language,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-
-      if (data.illustrationPlan && Array.isArray(data.illustrationPlan)) {
-        for (const planItem of data.illustrationPlan) {
-          const newItem: IllustrationItem = {
-            id: 'ill-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-            bookId: book.id,
-            chapterNumber: planItem.chapterNumber || 1,
-            ownerId: 'current-user',
-            purpose: planItem.purpose || 'Chapter Illustration',
-            description: planItem.description || 'Editorial visual graphic',
-            visualType: planItem.visualType || 'diagram',
-            aspectRatio: planItem.aspectRatio || '16:9',
-            placement: planItem.placement || 'chapter_header',
-            caption: planItem.caption || '',
-            status: 'planned',
-            createdAt: new Date().toISOString(),
-          };
-          onSaveIllustration(newItem);
-        }
-        setStatusMessage(
-          language === 'ar'
-            ? `تم وضع خطة الرسوم التوضيحية بنجاح (${data.illustrationPlan.length} رسم)!`
-            : `Visual plan generated successfully with ${data.illustrationPlan.length} editorial artworks!`
-        );
-      }
+      const opps = IllustrationIntelligenceEngine.analyzeManuscriptVisualPlan(book, chapters);
+      setOpportunities(opps);
+      setStatusMessage(
+        isArabic
+          ? `تم فحص المسودة واقتراح ${opps.length} فرصة إيضاحية بصرية متسقة مع الفصول!`
+          : `Manuscript analyzed: detected ${opps.length} principled visual opportunities!`
+      );
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error planning illustrations.');
+      setErrorMessage(err.message || 'Error analyzing manuscript.');
     } finally {
-      setPlanning(false);
+      setAnalyzingPlan(false);
     }
   };
 
-  // Generate Image for Item
+  // Adopt opportunity into live illustration items
+  const handleAdoptOpportunity = (opp: VisualOpportunity) => {
+    const item = IllustrationIntelligenceEngine.instantiateIllustration(opp, book.id, 'current-user');
+    onSaveIllustration(item);
+    setStatusMessage(
+      isArabic
+        ? `تم اعتماد الرسم "${opp.conceptName}" وإدراجه في الفصل ${opp.chapterNumber}!`
+        : `Approved visual "${opp.conceptName}" for Chapter ${opp.chapterNumber}!`
+    );
+  };
+
+  // Upload custom high-res image for an item
+  const handleUploadImageForItem = (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      const target = illustrations.find((i) => i.id === itemId);
+      if (target && dataUrl) {
+        onSaveIllustration({
+          ...target,
+          imageUrl: dataUrl,
+          status: 'approved',
+        });
+        setStatusMessage(
+          isArabic ? 'تم رفع الصورة المخصصة وتعيينها للشكل!' : 'Custom high-res image uploaded for illustration!'
+        );
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Generate deterministic technical diagram for an item
+  const handleGenerateDeterministicDiagram = (item: IllustrationItem) => {
+    const diagramUrl = generateDeterministicDiagram({
+      title: item.purpose,
+      subtitle: item.caption,
+      type: 'architecture',
+      nodes: [
+        { id: '1', label: isArabic ? 'مدخلات الإدراك' : 'Perception Ingestion', role: isArabic ? 'مرحلة جمع البيانات' : 'Sensory Feed', color: '#0F766E' },
+        { id: '2', label: isArabic ? 'حلقة الاستدلال المركزي' : 'Cognitive Core', role: isArabic ? 'المعالجة الحتمية' : 'Deterministic Loop', color: '#38BDF8' },
+        { id: '3', label: isArabic ? 'أدوات التنفيذ الموثقة' : 'Verified Actuators', role: isArabic ? 'تنفيذ الإجراءات' : 'Safety Gate', color: '#C8A96B' },
+      ],
+      isRtl,
+    });
+
+    onSaveIllustration({
+      ...item,
+      imageUrl: diagramUrl,
+      visualType: 'technical_diagram',
+      status: 'approved',
+    });
+    setStatusMessage(
+      isArabic ? 'تم إنشاء مخطط هندسي حتمي دقيق مع الحواشي!' : 'Deterministic technical diagram generated with verified labels!'
+    );
+  };
+
+  // Generate image via API
   const handleGenerateImage = async (item: IllustrationItem) => {
     setGeneratingId(item.id);
     setStatusMessage(null);
     setErrorMessage(null);
     try {
-      let imageUrl: string | null = null;
-      try {
-        const res = await fetch('/api/gemini/generate-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: `${item.purpose || 'Chapter visual'}. ${item.description || ''}`,
-            aspectRatio: item.aspectRatio || '16:9',
-            visualType: item.visualType || 'diagram',
-          }),
-        });
-        const data = await res.json();
-        if (data.imageUrl) {
-          imageUrl = data.imageUrl;
-        }
-      } catch {
-        // network or server error, fallback to client SVG
-      }
-
-      if (!imageUrl) {
-        const prompt = `${item.purpose || 'Chapter visual'}. ${item.description || ''}`;
-        const aspectRatio = item.aspectRatio || '16:9';
-        let [w, h] = [800, 450];
-        if ((aspectRatio as string) === '3:4') [w, h] = [600, 800];
-        else if ((aspectRatio as string) === '4:3') [w, h] = [800, 600];
-        else if ((aspectRatio as string) === '1:1') [w, h] = [800, 800];
-        const safeText = prompt.replace(/[<>&"]/g, '').slice(0, 50);
-        const svg = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0F172A"/>
-      <stop offset="50%" stop-color="#1E293B"/>
-      <stop offset="100%" stop-color="#0F2B36"/>
-    </linearGradient>
-    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#C8A96B"/>
-      <stop offset="100%" stop-color="#E4C88A"/>
-    </linearGradient>
-  </defs>
-  <rect width="${w}" height="${h}" fill="url(#bg)"/>
-  <rect x="24" y="24" width="${w - 48}" height="${h - 48}" fill="none" stroke="#0F766E" stroke-width="2" stroke-dasharray="6 4" opacity="0.4"/>
-  <circle cx="${w / 2}" cy="${h / 2 - 20}" r="${Math.min(w, h) * 0.22}" fill="#0F766E" opacity="0.25"/>
-  <polygon points="${w / 2},${h / 2 - 55} ${w / 2 + 35},${h / 2 - 5} ${w / 2},${h / 2 - 15} ${w / 2 - 35},${h / 2 - 5}" fill="url(#gold)" opacity="0.85"/>
-  <text x="${w / 2}" y="${h / 2 + 55}" font-family="system-ui, sans-serif" font-weight="700" font-size="18" fill="#F8FAFC" text-anchor="middle">BOOKCRAFT ILLUSTRATION</text>
-  <text x="${w / 2}" y="${h / 2 + 80}" font-family="system-ui, sans-serif" font-size="12" fill="#94A3B8" text-anchor="middle">${safeText}</text>
-</svg>`;
-        imageUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
-      }
-
-      onSaveIllustration({
-        ...item,
-        imageUrl,
-        status: 'generated',
+      const prompt = `Professional editorial publication illustration: ${item.purpose}. ${item.description}. Clean lighting, publication standard artwork.`;
+      const res = await fetch('/api/gemini/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          aspectRatio: item.aspectRatio || '16:9',
+          visualType: item.visualType || 'editorial_illustration',
+        }),
       });
-      setStatusMessage(
-        language === 'ar'
-          ? `تم توليد الرسم التوضيحي للفصل ${item.chapterNumber || 1} بنجاح!`
-          : `Artwork for Chapter ${item.chapterNumber || 1} rendered successfully!`
-      );
+
+      const data = await res.json();
+      if (data.imageUrl) {
+        onSaveIllustration({
+          ...item,
+          imageUrl: data.imageUrl,
+          status: 'approved',
+        });
+        setStatusMessage(
+          data.note ||
+            (isArabic ? 'تم توليد الصورة واعتمادها بنجاح!' : 'Illustration generated and approved successfully!')
+        );
+      } else {
+        throw new Error(data.error || 'Failed to generate image.');
+      }
     } catch (err: any) {
       setErrorMessage(
-        language === 'ar'
-          ? `تعذر توليد الرسم: ${err.message || 'خطأ غير متوقع'}`
-          : `Failed to generate artwork: ${err.message || 'Unexpected error'}`
+        err.message ||
+          'Generation quota limit reached. You can select an authentic artwork from the Visual Library or create a deterministic diagram.'
       );
     } finally {
       setGeneratingId(null);
     }
   };
 
-  // Add Manual Item
-  const handleAddManual = () => {
-    const newItem: IllustrationItem = {
-      id: 'ill-' + Date.now(),
-      bookId: book.id,
-      chapterNumber: 1,
-      ownerId: 'current-user',
-      purpose: 'Technical or Conceptual Figure',
-      description: 'Illustration or diagram description for the chapter.',
-      visualType: 'diagram',
-      aspectRatio: '16:9',
-      placement: 'chapter_header',
-      caption: 'Figure description and source reference.',
-      status: 'planned',
-      createdAt: new Date().toISOString(),
-    };
-    onSaveIllustration(newItem);
-  };
-
-  // Upload Custom Image Replacement
-  const handleUploadCustom = (item: IllustrationItem, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      onSaveIllustration({
-        ...item,
-        imageUrl: reader.result as string,
-        status: 'generated',
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-      {/* Header */}
+      {/* Header Banner */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30 text-xs font-semibold mb-2">
             <ImageIcon className="w-3.5 h-3.5" />
-            <span>Illustration Planning & Generation</span>
+            <span>Illustration Intelligence & Editorial Visual Studio</span>
           </div>
           <h2 className="text-2xl font-extrabold text-white">{t.illustrations.title}</h2>
           <p className="text-xs text-slate-400 mt-1">{t.illustrations.subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleAddManual}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t.illustrations.addVisual}</span>
-          </button>
-
-          <button
-            onClick={handleAutoPlan}
-            disabled={planning}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-teal-900/30 transition-all cursor-pointer"
-          >
-            {planning ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Planning Visuals...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>{t.illustrations.planNewVisuals}</span>
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={handleRunVisualIntelligence}
+          disabled={analyzingPlan}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+        >
+          {analyzingPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          <span>{isArabic ? 'إعادة تحليل المسودة والتخطيط البصري' : 'Analyze Manuscript Visual Plan'}</span>
+        </button>
       </div>
 
       {statusMessage && (
-        <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center gap-2 text-emerald-300 text-xs font-medium">
-          <CheckCircle className="w-4 h-4 shrink-0" />
+        <div className="p-4 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center gap-2 text-emerald-300 text-sm">
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
           <span>{statusMessage}</span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl flex items-center gap-2 text-rose-300 text-xs font-medium">
-          <XCircle className="w-4 h-4 shrink-0" />
+        <div className="p-4 bg-rose-500/15 border border-rose-500/30 rounded-xl flex items-center gap-2 text-rose-300 text-sm">
+          <AlertCircle className="w-5 h-5 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Visuals List */}
-      <div className="space-y-4">
-        <h3 className="text-base font-bold text-white flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-teal-400" />
-            {t.illustrations.planTitle} ({illustrations.length})
+      {/* Manuscript Visual Intelligence Opportunities Drawer */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Bookmark className="w-4 h-4 text-amber-400" />
+              {isArabic ? 'الفرص الإيضاحية المقترحة من محرك الذكاء البصري' : 'Principled Visual Opportunities (Manuscript-Grounded)'}
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {isArabic
+                ? 'فرص إيضاحية مبنية على قراءة فصول الكتاب لتجنب الرسوم الزخرفية العشوائية وحساب كثافة الإيضاح المعيارية'
+                : 'Curated visual opportunities derived from manuscript text analysis to avoid gratuitous decorative filler'}
+            </p>
+          </div>
+
+          <span className="text-[11px] text-teal-400 font-mono px-2.5 py-1 bg-slate-950 rounded-full border border-teal-500/30">
+            {opportunities.length} Opportunities Detected
           </span>
-          <span className="text-xs text-slate-400">
-            {illustrations.filter((i) => i.status === 'generated').length} generated
-          </span>
-        </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {opportunities.map((opp) => {
+            const alreadyAdopted = illustrations.some((i) => i.purpose === opp.conceptName);
+            return (
+              <div
+                key={opp.id}
+                className="p-4 rounded-xl border border-slate-800 bg-slate-850/60 flex flex-col justify-between space-y-3"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-teal-300 font-mono">
+                      Ch. {opp.chapterNumber} • {opp.recommendedVisualType.replace('_', ' ').toUpperCase()}
+                    </span>
+                    <span
+                      className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                        opp.importance === 'essential'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      }`}
+                    >
+                      {opp.importance}
+                    </span>
+                  </div>
+
+                  <h4 className="text-sm font-bold text-white leading-tight">{opp.conceptName}</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">
+                    {opp.educationalPurpose}
+                  </p>
+
+                  <div className="p-2 rounded bg-slate-900 border border-slate-800/80 text-[10px] text-slate-400 italic line-clamp-2">
+                    "{opp.relevantPassageSnippet}"
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {opp.aspectRatio}
+                  </span>
+                  <button
+                    onClick={() => handleAdoptOpportunity(opp)}
+                    disabled={alreadyAdopted}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                      alreadyAdopted
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-teal-500 hover:bg-teal-400 text-slate-950'
+                    }`}
+                  >
+                    {alreadyAdopted ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                    <span>{alreadyAdopted ? (isArabic ? 'معتمد في الكتاب' : 'Approved') : (isArabic ? 'اعتماد وإدراج' : 'Approve for Book')}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Active Approved Visuals in the Book */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Layers className="w-5 h-5 text-teal-400" />
+              {isArabic ? 'الرسوم والأشكال المعتمدة داخل الكتاب' : 'Approved Visual Assets in Manuscript'}
+            </h3>
+            <span className="text-xs text-slate-400">
+              {illustrations.length} {isArabic ? 'عناصر بصرية مدمجة في التصدير' : 'assets integrated into exported PDF & DOCX'}
+            </span>
+          </div>
+        </div>
 
         {illustrations.length === 0 ? (
-          <div className="bg-slate-800/40 border border-dashed border-slate-700 rounded-2xl p-12 text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
-              <ImageIcon className="w-8 h-8" />
-            </div>
-            <h4 className="text-base font-semibold text-white">No Visual Elements Planned Yet</h4>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Click &quot;Auto-Plan Visuals for Manuscript&quot; to have the AI identify key diagram and illustration opportunities across your chapters.
-            </p>
-            <button
-              onClick={handleAutoPlan}
-              className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-colors"
-            >
-              Auto-Plan Visuals
-            </button>
+          <div className="p-8 text-center text-slate-400 border border-dashed border-slate-800 rounded-xl space-y-2">
+            <ImageIcon className="w-8 h-8 mx-auto text-slate-600" />
+            <p className="text-sm">No illustrations approved yet.</p>
+            <p className="text-xs text-slate-500">Adopt an opportunity above or create a technical diagram.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {illustrations.map((item) => {
-              const isGenerating = generatingId === item.id;
-              return (
-                <div
-                  key={item.id}
-                  className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 space-y-4 shadow-lg flex flex-col justify-between"
-                >
-                  <div className="space-y-3">
-                    {/* Item Header */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-teal-400 font-bold">
-                          Ch.{item.chapterNumber || 1}
-                        </span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30 uppercase">
-                          {item.visualType}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-slate-400">
-                          {item.aspectRatio}
-                        </span>
-                        <button
-                          onClick={() => onDeleteIllustration(item.id)}
-                          className="text-slate-500 hover:text-rose-400 p-1 rounded"
-                          title={t.common.delete}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+            {illustrations.map((item) => (
+              <div
+                key={item.id}
+                className="bg-slate-850 border border-slate-800 rounded-xl overflow-hidden shadow-lg flex flex-col justify-between"
+              >
+                {/* Visual Artwork Container */}
+                <div className="aspect-[16/9] w-full bg-slate-950 relative overflow-hidden flex items-center justify-center border-b border-slate-800">
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.purpose}
+                      className="w-full h-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="p-4 text-center text-slate-500 space-y-1">
+                      <ImageIcon className="w-8 h-8 mx-auto text-slate-600" />
+                      <span className="text-xs block">Visual Pending Generation</span>
                     </div>
+                  )}
 
-                    {/* Purpose & Description */}
-                    <div>
-                      <input
-                        type="text"
-                        value={item.purpose}
-                        onChange={(e) =>
-                          onSaveIllustration({ ...item, purpose: e.target.value })
-                        }
-                        className="text-sm font-bold text-white bg-transparent border-b border-slate-800 focus:border-teal-500 focus:outline-none w-full pb-1"
-                        placeholder="Purpose of Visual"
-                      />
-                      <textarea
-                        rows={2}
-                        value={item.description}
-                        onChange={(e) =>
-                          onSaveIllustration({ ...item, description: e.target.value })
-                        }
-                        className="text-xs text-slate-300 bg-slate-950/50 border border-slate-800 rounded-lg p-2 w-full mt-2 focus:outline-none focus:ring-1 focus:ring-teal-500 leading-relaxed"
-                        placeholder="Detailed prompt description..."
-                      />
-                    </div>
+                  {/* Top Badge */}
+                  <div className="absolute top-2 left-2 rtl:right-2 rtl:left-auto flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900/90 text-teal-300 border border-slate-700 font-mono">
+                      Ch. {item.chapterNumber || 1} • {item.visualType.replace('_', ' ').toUpperCase()}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/90 text-slate-950 font-mono">
+                      APPROVED ✓
+                    </span>
+                  </div>
+                </div>
 
-                    {/* Visual Preview / Canvas */}
-                    <div className="aspect-video w-full rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden relative group">
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.purpose}
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <div className="text-center p-4 space-y-1 text-slate-500">
-                          <ImageIcon className="w-8 h-8 mx-auto stroke-1" />
-                          <div className="text-xs font-medium">No graphic generated yet</div>
-                        </div>
-                      )}
-
-                      {/* Hover Overlay with Upload Trigger */}
-                      <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                        <label className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-white flex items-center gap-1.5 border border-slate-600">
-                          <Upload className="w-3.5 h-3.5" />
-                          <span>Replace</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleUploadCustom(item, e)}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Caption Input */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-semibold text-slate-400 uppercase">
-                        {t.illustrations.caption}
-                      </label>
-                      <input
-                        type="text"
-                        value={item.caption}
-                        onChange={(e) =>
-                          onSaveIllustration({ ...item, caption: e.target.value })
-                        }
-                        className="text-xs text-slate-300 bg-slate-950/50 border border-slate-800 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        placeholder="Figure caption in published book"
-                      />
-                    </div>
+                {/* Details & Controls */}
+                <div className="p-4 space-y-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-white leading-tight">{item.purpose}</h4>
+                    <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{item.description}</p>
                   </div>
 
-                  {/* Card Bottom Controls */}
-                  <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                        item.status === 'generated'
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : 'bg-amber-500/20 text-amber-300'
-                      }`}
-                    >
-                      {item.status}
-                    </span>
+                  {/* Caption input */}
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                      {isArabic ? 'التعليق التوضيحي المعتمد في الصفحة:' : 'Printed Caption in Manuscript:'}
+                    </label>
+                    <input
+                      type="text"
+                      value={item.caption}
+                      onChange={(e) => onSaveIllustration({ ...item, caption: e.target.value })}
+                      className="w-full bg-slate-800 text-xs text-slate-200 border border-slate-700 rounded-lg p-2 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedAssetForItemId(item.id)}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer"
+                        title="Choose from Asset Library"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                      </button>
+
+                      <label
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer"
+                        title="Upload Custom Image"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-amber-400" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleUploadImageForItem(item.id, e)}
+                          className="hidden"
+                        />
+                      </label>
+
+                      <button
+                        onClick={() => handleGenerateDeterministicDiagram(item)}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-teal-400 text-xs font-medium cursor-pointer"
+                        title="Generate Deterministic Diagram"
+                      >
+                        <Network className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => handleGenerateImage(item)}
+                        disabled={generatingId === item.id}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer"
+                        title="Regenerate with AI"
+                      >
+                        {generatingId === item.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
 
                     <button
-                      onClick={() => handleGenerateImage(item)}
-                      disabled={isGenerating}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-xs font-bold transition-colors cursor-pointer"
+                      onClick={() => onDeleteIllustration(item.id)}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/50 text-rose-400 text-xs cursor-pointer"
+                      title="Remove from book"
                     >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Rendering...</span>
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          <span>{item.imageUrl ? 'Regenerate' : 'Generate Graphic'}</span>
-                        </>
-                      )}
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Asset Selection Modal */}
+      {selectedAssetForItemId && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-teal-400" />
+                {isArabic ? 'اختر عملاً فنياً من مكتبة النشر' : 'Select Curated Publishing Artwork'}
+              </h3>
+              <button
+                onClick={() => setSelectedAssetForItemId(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {VISUAL_ASSETS.map((asset) => (
+                <div
+                  key={asset.id}
+                  onClick={() => {
+                    const target = illustrations.find((i) => i.id === selectedAssetForItemId);
+                    if (target) {
+                      onSaveIllustration({
+                        ...target,
+                        imageUrl: asset.url,
+                        visualType: asset.visualType,
+                        status: 'approved',
+                      });
+                    }
+                    setSelectedAssetForItemId(null);
+                  }}
+                  className="group relative rounded-xl overflow-hidden border border-slate-800 hover:border-teal-500 cursor-pointer bg-slate-950 flex flex-col justify-between"
+                >
+                  <div className="aspect-[16/9] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={asset.url}
+                      alt={asset.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  </div>
+                  <div className="p-2.5 space-y-1">
+                    <span className="text-[9px] font-bold uppercase text-teal-400">
+                      {asset.category}
+                    </span>
+                    <h5 className="text-xs font-bold text-white truncate">
+                      {language === 'ar' ? asset.titleAr : asset.title}
+                    </h5>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

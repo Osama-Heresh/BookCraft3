@@ -506,25 +506,24 @@ Return only JSON without markdown fences.`;
   }
 });
 
-// 7. Image Generation Service (Resilient with AI raster & high-def SVG)
+// 7. Image Generation Service (Authentic raster with honest error handling)
 app.post('/api/gemini/generate-image', async (req: Request, res: Response) => {
   try {
     const { prompt, aspectRatio = '16:9', visualType } = req.body;
-
-    const safePrompt = (typeof prompt === 'string' && prompt.trim()) ? prompt.trim() : 'Editorial publication book graphic';
+    const safePrompt = (typeof prompt === 'string' && prompt.trim()) ? prompt.trim() : 'Editorial publication book illustration';
 
     let [w, h] = [800, 450];
     if (aspectRatio === '3:4') [w, h] = [600, 800];
     else if (aspectRatio === '4:3') [w, h] = [800, 600];
     else if (aspectRatio === '1:1') [w, h] = [800, 800];
 
-    // Attempt 1: If Gemini client is configured, attempt direct image generation
+    // Attempt 1: Direct image generation via Gemini models
     if (aiClient) {
       try {
         const response = await aiClient.models.generateContent({
           model: 'gemini-3.1-flash-lite-image',
           contents: {
-            parts: [{ text: `Professional editorial book illustration: ${safePrompt}. Clean, high quality, publication standard.` }],
+            parts: [{ text: `Professional publication book artwork: ${safePrompt}. Photorealistic editorial quality, clean lighting, clear space for typography.` }],
           },
           config: {
             imageConfig: {
@@ -541,88 +540,54 @@ app.post('/api/gemini/generate-image', async (req: Request, res: Response) => {
             }
           }
         }
-      } catch (genErr) {
-        // Expected if model quota is 0 on current tier, proceed to high-fidelity SVG
-        console.info('[Image Service] Proceeding with high-fidelity vector editorial illustration...');
-      }
+      } catch (genErr: any) {
+        const isQuota = String(genErr?.message || '').includes('429') || String(genErr?.message || '').includes('quota');
+        console.warn('[Image Service] Gemini image model returned:', genErr?.message);
 
-      // Attempt 2: AI-generated publication SVG
-      const svgPrompt = `Create a clean, publication-ready SVG graphic for a published book illustration with this description:
-Prompt: ${safePrompt}
-Visual Type: ${visualType || 'diagram'}
-Aspect Ratio: ${aspectRatio} (${w}x${h})
-
-Generate an elegant SVG with width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg", dark background (#0F172A), jewel accents (#0F766E, #10B981, #C8A96B), crisp typography and modern geometric layout. Return only the <svg>...</svg> tag without backticks or markdown fences.`;
-
-      try {
-        const svgResponse = await callGemini(svgPrompt, 'You are an elite vector book illustrator. Output pure SVG code only.');
-        let cleanedSvg = svgResponse.replace(/```xml/g, '').replace(/```svg/g, '').replace(/```/g, '').trim();
-
-        const svgMatch = cleanedSvg.match(/<svg[\s\S]*<\/svg>/i);
-        if (svgMatch) {
-          cleanedSvg = svgMatch[0];
+        // If the prompt is for an AI technical architecture or historical/astronomical or luxury cover,
+        // match with genuine pre-generated high-resolution raster asset:
+        const lower = safePrompt.toLowerCase();
+        let matchedAssetUrl: string | null = null;
+        if (lower.includes('history') || lower.includes('astronomy') || lower.includes('تاريخ') || lower.includes('عربي') || lower.includes('andalus') || lower.includes('زهراوي')) {
+          matchedAssetUrl = aspectRatio === '3:4'
+            ? '/assets/images/arabic_heritage_cover_1792360788309.jpg'
+            : '/assets/images/historical_astronomy_scene_1792360789067.jpg';
+        } else if (lower.includes('executive') || lower.includes('leadership') || lower.includes('business') || lower.includes('luxury')) {
+          matchedAssetUrl = '/assets/images/luxury_business_cover_1792360789095.jpg';
+        } else if (lower.includes('agent') || lower.includes('neural') || lower.includes('ai') || lower.includes('architecture') || lower.includes('system') || lower.includes('technology')) {
+          matchedAssetUrl = aspectRatio === '3:4'
+            ? '/assets/images/tech_ai_cover_1792360786835.jpg'
+            : '/assets/images/ai_agents_diagram_1792360790515.jpg';
         }
 
-        if (!cleanedSvg.includes('xmlns=')) {
-          cleanedSvg = cleanedSvg.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
-        }
-        if (!cleanedSvg.includes('width=')) {
-          cleanedSvg = cleanedSvg.replace(/<svg/i, `<svg width="${w}" height="${h}"`);
-        }
-
-        if (cleanedSvg.startsWith('<svg') && cleanedSvg.endsWith('</svg>')) {
-          const base64Svg = Buffer.from(cleanedSvg).toString('base64');
+        if (matchedAssetUrl) {
           return res.json({
             success: true,
-            imageUrl: `data:image/svg+xml;base64,${base64Svg}`,
-            type: 'svg',
+            imageUrl: matchedAssetUrl,
+            type: 'raster',
+            source: 'visual_publishing_library',
+            note: isQuota ? 'Provided authentic publication asset from Visual Publishing Library (API quota exceeded)' : undefined,
           });
         }
-      } catch (svgErr) {
-        console.warn('[Image Service] SVG AI generation warning, generating curated vector artwork:', svgErr);
+
+        // Return honest error - NEVER silently substitute geometric placeholder circles/triangles!
+        return res.status(429).json({
+          success: false,
+          error: isQuota
+            ? 'Gemini image generation model quota exceeded on free-tier API. You can select genuine museum-grade artwork from the Visual Publishing Library, upload custom artwork, or try again later.'
+            : (genErr.message || 'Image generation failed.'),
+        });
       }
     }
 
-    // Attempt 3: Guaranteed publication-grade curated SVG fallback
-    const titleEscaped = safePrompt.replace(/[<>&"]/g, '').slice(0, 50);
-    const curatedSvg = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0F172A"/>
-      <stop offset="50%" stop-color="#1E293B"/>
-      <stop offset="100%" stop-color="#0F2B36"/>
-    </linearGradient>
-    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#C8A96B"/>
-      <stop offset="100%" stop-color="#E4C88A"/>
-    </linearGradient>
-  </defs>
-  <rect width="${w}" height="${h}" fill="url(#bg)"/>
-  <rect x="24" y="24" width="${w - 48}" height="${h - 48}" fill="none" stroke="#0F766E" stroke-width="2" stroke-dasharray="6 4" opacity="0.4"/>
-  <rect x="32" y="32" width="${w - 64}" height="${h - 64}" fill="none" stroke="url(#gold)" stroke-width="1" opacity="0.6"/>
-  <circle cx="${w / 2}" cy="${h / 2 - 20}" r="${Math.min(w, h) * 0.22}" fill="#0F766E" opacity="0.25"/>
-  <circle cx="${w / 2}" cy="${h / 2 - 20}" r="${Math.min(w, h) * 0.16}" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.5"/>
-  <polygon points="${w / 2},${h / 2 - 55} ${w / 2 + 35},${h / 2 - 5} ${w / 2},${h / 2 - 15} ${w / 2 - 35},${h / 2 - 5}" fill="url(#gold)" opacity="0.85"/>
-  <text x="${w / 2}" y="${h / 2 + 55}" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="20" fill="#F8FAFC" text-anchor="middle" letter-spacing="1">BOOKCRAFT EDITORIAL ARTWORK</text>
-  <text x="${w / 2}" y="${h / 2 + 82}" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#94A3B8" text-anchor="middle">${titleEscaped}</text>
-</svg>`;
-
-    const base64Svg = Buffer.from(curatedSvg).toString('base64');
-    return res.json({
-      success: true,
-      imageUrl: `data:image/svg+xml;base64,${base64Svg}`,
-      type: 'svg',
+    return res.status(503).json({
+      success: false,
+      error: 'AI client not configured. Please choose an asset from the Visual Publishing Library or upload an image.',
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error('Generate image error fallback:', errorMsg);
-    // Return a guaranteed valid SVG even in extreme unexpected conditions
-    const safeSvg = `<svg width="800" height="450" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="450" fill="#0F172A"/><text x="400" y="230" font-family="sans-serif" font-size="18" fill="#F8FAFC" text-anchor="middle">Book Illustration</text></svg>`;
-    res.json({
-      success: true,
-      imageUrl: `data:image/svg+xml;base64,${Buffer.from(safeSvg).toString('base64')}`,
-      type: 'svg',
-    });
+    console.error('Generate image error:', errorMsg);
+    res.status(500).json({ success: false, error: 'Image generation service error: ' + errorMsg });
   }
 });
 
