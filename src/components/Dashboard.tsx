@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BookOpen,
   Plus,
@@ -11,6 +11,8 @@ import {
   Copy,
   Trash2,
   FolderOpen,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import { BookProject } from '../types';
 import { Language, translations } from '../lib/i18n';
@@ -33,6 +35,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   language,
 }) => {
   const t = translations[language];
+  const [deleteConfirmBook, setDeleteConfirmBook] = useState<BookProject | null>(null);
 
   const inEditingCount = books.filter((b) => b.status === 'editing').length;
   const readyPublishCount = books.filter(
@@ -226,19 +229,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => onDuplicateBook(book)}
-                        className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-lg transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDuplicateBook(book);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
                         title={t.dashboard.duplicate}
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => {
-                          if (window.confirm(t.common.confirmDelete)) {
-                            onDeleteBook(book.id);
-                          }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmBook(book);
                         }}
-                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded-lg transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
                         title={t.common.delete}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -251,6 +256,52 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmBook && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6">
+            <div className="flex items-start justify-between">
+              <div className="w-12 h-12 rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <button
+                onClick={() => setDeleteConfirmBook(null)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">
+                {t.common.confirmDelete}
+              </h3>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                Are you sure you want to delete <span className="font-semibold text-white">"{deleteConfirmBook.title}"</span>? This action cannot be undone and will permanently remove all chapters and assets.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setDeleteConfirmBook(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 font-medium text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteBook(deleteConfirmBook.id);
+                  setDeleteConfirmBook(null);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm shadow-lg shadow-rose-900/40 transition-colors"
+              >
+                Delete Book
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
