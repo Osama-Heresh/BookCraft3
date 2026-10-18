@@ -726,9 +726,11 @@ app.post('/api/export-pdf', async (req: Request, res: Response) => {
 async function startServer() {
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (req: Request, res: Response) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
-    });
+    if (!process.env.VERCEL) {
+      app.get('*', (req: Request, res: Response) => {
+        res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      });
+    }
   } else {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -737,12 +739,22 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[BookCraft AI] Server listening on http://0.0.0.0:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`[BookCraft AI] Server listening on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
-startServer().catch((err) => {
-  console.error('[BookCraft AI] Failed to start server:', err);
-  process.exit(1);
-});
+if (!process.env.VERCEL) {
+  startServer().catch((err) => {
+    console.error('[BookCraft AI] Failed to start server:', err);
+    process.exit(1);
+  });
+} else {
+  if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.resolve(__dirname, 'dist')));
+  }
+}
+
+export default app;
