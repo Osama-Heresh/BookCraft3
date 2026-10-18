@@ -1,0 +1,6 @@
+{
+  "name": "BookCraft AI",
+  "description": "AI-Powered Book Creation, Editorial Intelligence & Professional Publishing Platform. Transform manuscripts, notes, research, and expert knowledge into beautifully written, professionally designed, illustrated, and publication-ready books.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

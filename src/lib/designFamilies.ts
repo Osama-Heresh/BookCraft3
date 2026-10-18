@@ -1,0 +1,148 @@
+import { DesignSystem } from '../types';
+
+export const DESIGN_FAMILIES: DesignSystem[] = [
+  {
+    id: 'modern-editorial',
+    name: 'Modern Editorial',
+    nameAr: 'التحرير المعاصر',
+    category: 'Nonfiction & Essays',
+    description: 'Refined serif typography with generous line height and modern asymmetrical chapter heads.',
+    descriptionAr: 'طباعة كلاسيكية راقية مع تباعد سطور متزن وعناوين فصول عصرية غير نمطية.',
+    bodyFont: "'EB Garamond', Georgia, serif",
+    headingFont: "'Inter', sans-serif",
+    primaryAccent: '#0F766E', // Deep Teal
+    secondaryAccent: '#C8A96B', // Gold
+    pageBackground: '#FFFFFF',
+    trimSize: '6x9',
+    sampleQuote: 'A book should be an axe to break the frozen sea within us.',
+    sampleQuoteAr: 'الكتاب سراجٌ يستضيء به العقل في دياجير الجهل.',
+  },
+  {
+    id: 'academic-research',
+    name: 'Academic & Research',
+    nameAr: 'البحث الأكاديمي والتوثيق',
+    category: 'Academic & Science',
+    description: 'Rigorous footnote handling, strict citation margins, and formal typographic hierarchy.',
+    descriptionAr: 'معالجة دقيقة للهوامش، وحواشي توثيق معيارية، وتدرج طباعي أكاديمي صارم.',
+    bodyFont: "'Times New Roman', 'Amiri', serif",
+    headingFont: "'EB Garamond', 'Cairo', serif",
+    primaryAccent: '#1E293B', // Slate Navy
+    secondaryAccent: '#475569',
+    pageBackground: '#FCFCFD',
+    trimSize: 'a4',
+    sampleQuote: 'Empirical verification distinguishes conjecture from enduring principle.',
+    sampleQuoteAr: 'البرهان العلمي هو الفيصل بين الفرضية العابرة والحقيقة الراسخة.',
+  },
+  {
+    id: 'historical-archive',
+    name: 'Historical Archive',
+    nameAr: 'الأرشيف التاريخي والتراث',
+    category: 'History & Genealogy',
+    description: 'Subtle warm parchment paper tone, traditional Arabic/English ligatures, and classic flourishes.',
+    descriptionAr: 'درجة ورق دافئة عاجية، خطوط تراثية أصيلة وزخارف فصلية كلاسيكية متقنة.',
+    bodyFont: "'EB Garamond', 'Amiri', serif",
+    headingFont: "'Cinzel', 'Amiri', serif",
+    primaryAccent: '#78350F', // Warm Walnut
+    secondaryAccent: '#D97706', // Amber
+    pageBackground: '#FFFDF7',
+    trimSize: '6x9',
+    sampleQuote: 'History is not merely the past recorded, but the present understood.',
+    sampleQuoteAr: 'التاريخ ليس مجرد سردٍ للماضي، بل هو مرآة الحاضر ومشكاة المستقبل.',
+  },
+  {
+    id: 'business-executive',
+    name: 'Business Executive',
+    nameAr: 'الإدارة التنفيذية والأعمال',
+    category: 'Business & Leadership',
+    description: 'High-contrast sans headings, clear framework callouts, KPI summary styling, and bold chapter openers.',
+    descriptionAr: 'عناوين ذات تباين عالٍ، مربعات إرشادية للمفاهيم الاستراتيجية، ومؤشرات أداء واضحة.',
+    bodyFont: "'Inter', system-ui, sans-serif",
+    headingFont: "'Inter', system-ui, sans-serif",
+    primaryAccent: '#0F172A', // Midnight Navy
+    secondaryAccent: '#10B981', // Emerald
+    pageBackground: '#FFFFFF',
+    trimSize: '6x9',
+    sampleQuote: 'Strategy without execution is the hallucination of progress.',
+    sampleQuoteAr: 'الاستراتيجية بلا تنفيذ متقن ليست سوى وهم الإنجاز.',
+  },
+  {
+    id: 'technical-engineering',
+    name: 'Technical & Engineering',
+    nameAr: 'الهندسة والتقنية المتخصصة',
+    category: 'Technology & STEM',
+    description: 'Monospace code block styling, diagram-first grid flow, and technical specifications indexing.',
+    descriptionAr: 'تنسيق متقن للشيفرات البرمجية، محاذاة للرسوم الهندسية، وتدرج تقني موحد.',
+    bodyFont: "'Inter', sans-serif",
+    headingFont: "'JetBrains Mono', monospace",
+    primaryAccent: '#2563EB', // Cobalt Blue
+    secondaryAccent: '#0284C7', // Sky
+    pageBackground: '#FFFFFF',
+    trimSize: 'a4',
+    sampleQuote: 'Simplicity is prerequisite for reliability.',
+    sampleQuoteAr: 'البساطة الهندسية هي الشرط الجوهري للاعتمادية والأمان.',
+  },
+  {
+    id: 'healthcare-professional',
+    name: 'Healthcare Professional',
+    nameAr: 'العلوم الطبية والصحية',
+    category: 'Medicine & Healthcare',
+    description: 'Clinical teal accents, prominent safety disclaimer styling, dosage unit clarity, and evidence summaries.',
+    descriptionAr: 'ألوان طبية مهدئة، إبراز إرشادات السلامة والجرعات، وتنسيق واضح للأدلة السريرية.',
+    bodyFont: "'Inter', sans-serif",
+    headingFont: "'Inter', sans-serif",
+    primaryAccent: '#0D9488', // Medical Teal
+    secondaryAccent: '#0284C7',
+    pageBackground: '#F8FAFC',
+    trimSize: '6x9',
+    sampleQuote: 'First, do no harm; second, illuminate with evidence.',
+    sampleQuoteAr: 'أولاً تجنب الضرر، ثم استنر بالأدلة والبراهين المحكمة.',
+  },
+  {
+    id: 'biography-memoir',
+    name: 'Biography & Memoir',
+    nameAr: 'السير الذاتية والمذكرات',
+    category: 'Memoir & Narrative',
+    description: 'Intimate literary proportions, comfortable wide margins, delicate chapter vignettes, and personal tone.',
+    descriptionAr: 'أبعاد أدبية رحبة، هوامش مريحة للعين، واستهلالات قصصية تنبض بالدفء الإنساني.',
+    bodyFont: "'EB Garamond', 'Amiri', serif",
+    headingFont: "'Cinzel', 'Cairo', serif",
+    primaryAccent: '#4C1D95', // Royal Plum
+    secondaryAccent: '#C8A96B', // Gold
+    pageBackground: '#FFFEFA',
+    trimSize: '6x9',
+    sampleQuote: 'We do not remember days; we remember moments etched into the soul.',
+    sampleQuoteAr: 'نحن لا نتذكر الأيام المجردة، بل اللحظات الخالدة المنقوشة في الوجدان.',
+  },
+  {
+    id: 'educational-illustrated',
+    name: 'Educational & Illustrated',
+    nameAr: 'التعليمي والمصور',
+    category: 'Textbooks & Training',
+    description: 'Dynamic sidebar notes, visual caption tags, highlight callouts, and multi-tier learning objectives.',
+    descriptionAr: 'حواشٍ جانبية ديناميكية، بطاقات تعليق على الأشكال، وصناديق لأهداف التعلم والمراجعة.',
+    bodyFont: "'Inter', sans-serif",
+    headingFont: "'Cairo', 'Inter', sans-serif",
+    primaryAccent: '#7C3AED', // Violet
+    secondaryAccent: '#F59E0B', // Amber
+    pageBackground: '#FFFFFF',
+    trimSize: 'a4',
+    sampleQuote: 'Tell me and I forget. Teach me and I remember. Involve me and I learn.',
+    sampleQuoteAr: 'قل لي وسأنسى، علمني وسأتذكر، أشركني وسأتعلم.',
+  },
+  {
+    id: 'minimalist-literary',
+    name: 'Minimalist Literary',
+    nameAr: 'الأدبي المصغر (Minimalist)',
+    category: 'Fiction & Philosophy',
+    description: 'Pure typographic restraint, no distracting borders, exquisite kerning, and generous white space.',
+    descriptionAr: 'نقاء بصري فائق، التخلي عن الزخارف الفائضة لصالح فخامة الحرف والمساحات البيضاء.',
+    bodyFont: "'EB Garamond', 'Amiri', serif",
+    headingFont: "'EB Garamond', 'Amiri', serif",
+    primaryAccent: '#171717', // Neutral Black
+    secondaryAccent: '#737373',
+    pageBackground: '#FFFFFF',
+    trimSize: '6x9',
+    sampleQuote: 'Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away.',
+    sampleQuoteAr: 'تتحقق البلاغة حين لا تجد كلمةً يمكنك الاستغناء عنها.',
+  },
+];

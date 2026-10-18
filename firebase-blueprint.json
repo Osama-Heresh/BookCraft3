@@ -1,0 +1,150 @@
+{
+  "entities": {
+    "userProfile": {
+      "title": "User Profile",
+      "description": "User account profile and preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "languagePreference": { "type": "string", "enum": ["en", "ar"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "bookProject": {
+      "title": "Book Project",
+      "description": "Core book metadata and production state",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "subtitle": { "type": "string", "maxLength": 256 },
+        "authorName": { "type": "string", "maxLength": 128 },
+        "language": { "type": "string", "enum": ["en", "ar", "bilingual"] },
+        "category": { "type": "string", "maxLength": 100 },
+        "targetAudience": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 3000 },
+        "status": { "type": "string", "enum": ["draft", "processing", "blueprint_ready", "editing", "design_ready", "export_ready", "published"] },
+        "designFamily": { "type": "string", "maxLength": 100 },
+        "trimSize": { "type": "string", "enum": ["6x9", "a4", "us_letter"] },
+        "editingLevel": { "type": "string", "enum": ["light", "standard", "deep"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "ownerId", "title", "language", "status"]
+    },
+    "chapter": {
+      "title": "Chapter",
+      "description": "Book chapter content and versioning",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "bookId": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "chapterNumber": { "type": "number" },
+        "title": { "type": "string", "maxLength": 256 },
+        "subtitle": { "type": "string", "maxLength": 256 },
+        "originalContent": { "type": "string" },
+        "processedContent": { "type": "string" },
+        "userEditedContent": { "type": "string" },
+        "wordCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["draft", "analyzing", "improved", "approved"] },
+        "order": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "bookId", "ownerId", "title", "chapterNumber"]
+    },
+    "writingQualityReport": {
+      "title": "Writing Quality Report",
+      "description": "Deterministic and AI quality metrics for a chapter",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "bookId": { "type": "string", "maxLength": 128 },
+        "chapterId": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "readabilityScore": { "type": "number" },
+        "grammarIssuesCount": { "type": "number" },
+        "repetitionIssuesCount": { "type": "number" },
+        "protectedElementsCount": { "type": "number" },
+        "voiceMatchRating": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "bookId", "chapterId", "ownerId"]
+    },
+    "illustrationPlan": {
+      "title": "Illustration Plan",
+      "description": "Visual element proposal and generation metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "bookId": { "type": "string", "maxLength": 128 },
+        "chapterId": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "purpose": { "type": "string", "maxLength": 256 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "visualType": { "type": "string", "enum": ["photo", "illustration", "diagram", "chart", "map", "timeline"] },
+        "aspectRatio": { "type": "string", "enum": ["1:1", "16:9", "4:3", "3:2"] },
+        "placement": { "type": "string", "enum": ["chapter_header", "inline_paragraph", "full_page", "callout"] },
+        "caption": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["planned", "generating", "generated", "approved", "rejected"] },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "bookId", "ownerId", "description", "visualType"]
+    },
+    "coverConfig": {
+      "title": "Cover Configuration",
+      "description": "Front, spine, and back cover layout and typography configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "bookId": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "frontTitle": { "type": "string", "maxLength": 256 },
+        "frontSubtitle": { "type": "string", "maxLength": 256 },
+        "authorName": { "type": "string", "maxLength": 128 },
+        "spineText": { "type": "string", "maxLength": 256 },
+        "backBlurb": { "type": "string", "maxLength": 2000 },
+        "authorBio": { "type": "string", "maxLength": 1000 },
+        "isbn": { "type": "string", "maxLength": 32 },
+        "themeColor": { "type": "string", "maxLength": 32 },
+        "fontStyle": { "type": "string", "maxLength": 64 },
+        "coverArtworkUrl": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "bookId", "ownerId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "userProfile",
+      "description": "User profile collection"
+    },
+    "/books/{bookId}": {
+      "schema": "bookProject",
+      "description": "User book projects"
+    },
+    "/books/{bookId}/chapters/{chapterId}": {
+      "schema": "chapter",
+      "description": "Chapters belonging to a book project"
+    },
+    "/books/{bookId}/qualityReports/{reportId}": {
+      "schema": "writingQualityReport",
+      "description": "Writing quality and fact-checking reports"
+    },
+    "/books/{bookId}/illustrations/{illustrationId}": {
+      "schema": "illustrationPlan",
+      "description": "Illustration plan and generated assets"
+    },
+    "/books/{bookId}/coverConfig/{configId}": {
+      "schema": "coverConfig",
+      "description": "Cover configuration settings"
+    }
+  }
+}

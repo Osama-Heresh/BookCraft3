@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBookOwner(bookId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/books/$(bookId)) &&
+        get(/databases/$(database)/documents/books/$(bookId)).data.ownerId == request.auth.uid;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() <= 256;
+      allow update: if isOwner(userId) &&
+        request.resource.data.uid == resource.data.uid &&
+        (!('email' in request.resource.data) || request.resource.data.email is string);
+      allow delete: if false;
+    }
+
+    // Books Collection
+    match /books/{bookId} {
+      allow get: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() &&
+        isValidId(bookId) &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() > 0 &&
+        request.resource.data.title.size() <= 256;
+      allow update: if isSignedIn() &&
+        isValidId(bookId) &&
+        resource.data.ownerId == request.auth.uid &&
+        request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isSignedIn() &&
+        isValidId(bookId) &&
+        resource.data.ownerId == request.auth.uid;
+
+      // Chapters Subcollection
+      match /chapters/{chapterId} {
+        allow get, list: if isBookOwner(bookId);
+        allow create: if isBookOwner(bookId) &&
+          isValidId(chapterId) &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.bookId == bookId &&
+          request.resource.data.title is string;
+        allow update: if isBookOwner(bookId) &&
+          isValidId(chapterId) &&
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.bookId == resource.data.bookId;
+        allow delete: if isBookOwner(bookId);
+      }
+
+      // Quality Reports Subcollection
+      match /qualityReports/{reportId} {
+        allow get, list: if isBookOwner(bookId);
+        allow create: if isBookOwner(bookId) &&
+          isValidId(reportId) &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.bookId == bookId;
+        allow update: if isBookOwner(bookId) &&
+          isValidId(reportId) &&
+          request.resource.data.ownerId == resource.data.ownerId;
+        allow delete: if isBookOwner(bookId);
+      }
+
+      // Illustration Plans Subcollection
+      match /illustrations/{illustrationId} {
+        allow get, list: if isBookOwner(bookId);
+        allow create: if isBookOwner(bookId) &&
+          isValidId(illustrationId) &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.bookId == bookId;
+        allow update: if isBookOwner(bookId) &&
+          isValidId(illustrationId) &&
+          request.resource.data.ownerId == resource.data.ownerId;
+        allow delete: if isBookOwner(bookId);
+      }
+
+      // Cover Config Subcollection
+      match /coverConfig/{configId} {
+        allow get, list: if isBookOwner(bookId);
+        allow create: if isBookOwner(bookId) &&
+          isValidId(configId) &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.bookId == bookId;
+        allow update: if isBookOwner(bookId) &&
+          isValidId(configId) &&
+          request.resource.data.ownerId == resource.data.ownerId;
+        allow delete: if isBookOwner(bookId);
+      }
+    }
+  }
+}
