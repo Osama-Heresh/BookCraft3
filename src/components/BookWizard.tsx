@@ -51,6 +51,16 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onComplete, onCancel, la
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Check Vercel 4.5MB Serverless Function payload limit
+    if (file.size > 4.5 * 1024 * 1024) {
+      setError(
+        language === 'ar'
+          ? 'حجم الملف يتجاوز الحد الأقصى لدوال خادم سيرفرلس (4.5 ميجابايت). يرجى تحميل ملف أصغر أو تقسيم المخطوط.'
+          : 'File size exceeds the 4.5MB Vercel serverless function payload limit. Please upload a smaller file or split the manuscript.'
+      );
+      return;
+    }
+
     setError(null);
     setFileName(file.name);
     setLoading(true);
@@ -70,6 +80,26 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onComplete, onCancel, la
               fileType: file.type,
             }),
           });
+
+          if (!res.ok) {
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const errData = await res.json();
+              throw new Error(errData.error || `Server error (${res.status})`);
+            } else {
+              const textErr = await res.text();
+              if (textErr.includes('The page could not be found') || textErr.includes('404')) {
+                throw new Error('API route /api/parse-document not found or deployment routing issue.');
+              }
+              throw new Error(`Server error (${res.status}): ${textErr.slice(0, 120)}`);
+            }
+          }
+
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const textResp = await res.text();
+            throw new Error('Unexpected server response format (non-JSON). Server may be misconfigured or returning HTML.');
+          }
 
           const data = await res.json();
           if (data.error) throw new Error(data.error);
@@ -124,6 +154,22 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onComplete, onCancel, la
         }),
       });
 
+      if (!res.ok) {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errData = await res.json();
+          throw new Error(errData.error || `Server error (${res.status})`);
+        } else {
+          const textErr = await res.text();
+          throw new Error(`Server error (${res.status}): ${textErr.slice(0, 120)}`);
+        }
+      }
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Unexpected non-JSON response from analysis server.');
+      }
+
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
@@ -165,6 +211,22 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onComplete, onCancel, la
           chapterCount: 5,
         }),
       });
+
+      if (!res.ok) {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errData = await res.json();
+          throw new Error(errData.error || `Server error (${res.status})`);
+        } else {
+          const textErr = await res.text();
+          throw new Error(`Server error (${res.status}): ${textErr.slice(0, 120)}`);
+        }
+      }
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Unexpected non-JSON response from blueprint server.');
+      }
 
       const data = await res.json();
       if (data.error) throw new Error(data.error);

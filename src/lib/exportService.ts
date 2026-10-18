@@ -1094,6 +1094,11 @@ export class ExportService {
     // ==========================================
     for (let idx = 0; idx < chapters.length; idx++) {
       const ch = chapters[idx];
+      const isAppendix = /^(Appendix|الملحق)\s*[A-Za-zأ-ي0-9]/i.test(ch.title);
+      const isReferences = /^(References|Bibliography|Further Reading|المراجع|المصادر|الموارد)/i.test(ch.title);
+
+      // Every chapter, appendix, and reference section starts on a new page
+      docParagraphs.push(new Paragraph({ children: [new PageBreak()] }));
 
       // Chapter Heading 1 in colored rectangular box
       docParagraphs.push(
@@ -1377,6 +1382,10 @@ export class ExportService {
           properties: {
             bidi: isRtl, // Essential for right-to-left layout in Microsoft Word
             page: {
+              size: {
+                width: 11906,
+                height: 16838,
+              },
               margin: {
                 top: 1440,
                 bottom: 1440,
