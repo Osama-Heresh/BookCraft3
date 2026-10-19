@@ -183,6 +183,14 @@ app.post('/api/parse-document', async (req: Request, res: Response) => {
   try {
     const { base64Content, fileName, fileType, rawText } = req.body;
 
+    if (!base64Content && !rawText) {
+      return res.status(400).json({ error: 'No document content provided.' });
+    }
+
+    if (base64Content && base64Content.length > 6 * 1024 * 1024) {
+      return res.status(413).json({ error: 'File size exceeds serverless limits (max 4.5MB). Please upload a smaller file.' });
+    }
+
     let extractedText = '';
     const warnings: string[] = [];
 
