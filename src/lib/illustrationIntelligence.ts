@@ -56,11 +56,15 @@ export class IllustrationIntelligenceEngine {
       title: opp.conceptName,
       subtitle: opp.captionBrief,
       type: opp.recommendedVisualType === 'technical_diagram' ? 'architecture' : 'flowchart',
-      nodes: (opp.dataLabelsOrLegend || [opp.conceptName, 'Processing Engine', 'Verified Output']).map((label, idx) => ({
+      nodes: (opp.dataLabelsOrLegend || [
+        opp.conceptName.slice(0, 15), 
+        `Chapter ${opp.chapterNumber} Focus`, 
+        'Implementation'
+      ]).map((label, idx) => ({
         id: `node-${idx}`,
         label,
         role: idx === 1 ? 'Core Pipeline' : 'Verification Boundary',
-        color: idx === 0 ? '#0F766E' : idx === 1 ? '#38BDF8' : '#C8A96B',
+        color: '#38BDF8',
       })),
       isRtl: /[\u0600-\u06FF]/.test(opp.conceptName),
     });
