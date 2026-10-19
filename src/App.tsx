@@ -187,7 +187,7 @@ export default function App() {
   };
 
   const handleDuplicateBook = async (book: BookProject) => {
-    const dupId = 'book-' + Date.now();
+    const dupId = 'book-' + crypto.randomUUID();
     const duplicated: BookProject = {
       ...book,
       id: dupId,

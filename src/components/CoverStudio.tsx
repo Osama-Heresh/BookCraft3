@@ -736,6 +736,35 @@ export const CoverStudio: React.FC<CoverStudioProps> = ({
                 className="w-full bg-slate-800 text-sm text-white border border-slate-700 rounded-lg p-2 focus:ring-1 focus:ring-teal-500 focus:outline-none"
               />
             </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">
+                {isArabic ? 'سيرة المؤلف:' : 'Author Bio:'}
+              </label>
+              <textarea
+                value={localCover.authorBio}
+                onChange={(e) => handleUpdate('authorBio', e.target.value)}
+                className="w-full bg-slate-800 text-sm text-white border border-slate-700 rounded-lg p-2 focus:ring-1 focus:ring-teal-500 focus:outline-none h-24"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">
+                {isArabic ? 'صورة المؤلف:' : 'Author Photo:'}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => handleUpdate('authorPhotoUrl', event.target?.result as string);
+                    reader.readAsDataURL(file);
+                }}
+                className="w-full bg-slate-800 text-sm text-slate-300 border border-slate-700 rounded-lg p-2 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+              />
+            </div>
           </div>
 
           {/* Print Specification & Spine Controls */}

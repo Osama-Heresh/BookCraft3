@@ -170,6 +170,6 @@ export function generateDeterministicDiagram(params: {
     </text>
   </svg>`;
 
-  const base64 = Buffer.from(svg).toString('base64');
+  const base64 = btoa(unescape(encodeURIComponent(svg)));
   return `data:image/svg+xml;base64,${base64}`;
 }

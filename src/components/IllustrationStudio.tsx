@@ -85,6 +85,9 @@ export const IllustrationStudio: React.FC<IllustrationStudioProps> = ({
         ? `تم اعتماد الرسم "${opp.conceptName}" وإدراجه في الفصل ${opp.chapterNumber}!`
         : `Approved visual "${opp.conceptName}" for Chapter ${opp.chapterNumber}!`
     );
+    setTimeout(() => {
+      document.getElementById('approved-visuals-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   // Upload custom high-res image for an item
@@ -291,7 +294,7 @@ export const IllustrationStudio: React.FC<IllustrationStudioProps> = ({
       </div>
 
       {/* Active Approved Visuals in the Book */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+      <div id="approved-visuals-section" className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div>
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
