@@ -102,12 +102,19 @@ export function generateDeterministicDiagram(params: {
   const count = Math.min(nodes.length, 3);
   const gap = (width - count * nodeWidth) / (count + 1);
 
+  const generateColor = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+    return '#' + '00000'.substring(0, 6 - c.length) + c;
+  };
+
   const nodeElements = nodes.slice(0, 3).map((node, idx) => {
     const x = isRtl
       ? width - (gap * (idx + 1) + nodeWidth * (idx + 1))
       : gap * (idx + 1) + nodeWidth * idx;
     const y = 180;
-    const accentColor = node.color || '#0F766E';
+    const accentColor = generateColor(node.label + idx);
 
     return `
       <g transform="translate(${x}, ${y})">
